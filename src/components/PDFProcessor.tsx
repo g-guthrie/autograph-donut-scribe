@@ -65,13 +65,19 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
       return;
     }
 
+    if (!hfToken) {
+      toast.error("Please enter your Hugging Face API token first");
+      return;
+    }
+
     setIsProcessing(true);
     
     try {
       await processFormWithAI();
     } catch (error) {
       console.error("Error processing form:", error);
-      toast.error("Error processing form");
+      const errorMessage = error instanceof Error ? error.message : "Error processing form";
+      toast.error(errorMessage);
       setProcessingResult('incomplete');
     } finally {
       setIsProcessing(false);

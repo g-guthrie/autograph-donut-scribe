@@ -132,7 +132,7 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
     const response = await fetch('https://api-inference.huggingface.co/models/naver-clova-ix/donut-base-finetuned-cord-v2', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer your-secret-key-here', // Hardcoded for prototyping
+        'Authorization': 'Bearer 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', // Hardcoded for prototyping
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ inputs: imageBase64 })

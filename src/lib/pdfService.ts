@@ -1,6 +1,19 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFDocument, rgb } from 'pdf-lib';
-import './pdfWorker';
+
+// Alternative worker setup approach
+const setupWorker = () => {
+  try {
+    // Try jsDelivr first
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+  } catch (error) {
+    console.warn('Failed to set up worker from CDN, trying alternative...');
+    // Fallback to a different CDN
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  }
+};
+
+setupWorker();
 
 export interface DetectedField {
   field: string;

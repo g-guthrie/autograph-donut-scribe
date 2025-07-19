@@ -31,7 +31,7 @@ const App = () => {
                   <Input
                     id="global-hf-token"
                     type="password"
-                    placeholder="hf_..."
+                    placeholder="Key is kept in memory and clears on refresh"
                     value={hfToken}
                     onChange={e => setHfToken(e.target.value)}
                     className="flex-1"

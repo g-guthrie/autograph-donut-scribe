@@ -1,12 +1,37 @@
-import * as pdfjsLib from 'pdfjs-dist';
-import { PDFDocument, rgb } from 'pdf-lib';
-import './pdfWorker';
+import * as pdfjsLib from "pdfjs-dist";
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+
+/* ---------- helpers ---------- */
+export async function firstPageAsBlob(pdfFile: File): Promise<Blob> {
+  const buf = await pdfFile.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const page = await pdf.getPage(1);
+  const vp = page.getViewport({ scale: 2 });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = vp.width;
+  canvas.height = vp.height;
+  await page.render({ canvasContext: canvas.getContext("2d")!, viewport: vp }).promise;
+
+  return new Promise<Blob>(res => canvas.toBlob(b => res(b!), "image/jpeg", 0.9));
+}
+
+export async function donutDetect(img: Blob, token: string) {
+  const r = await fetch(
+    "https://api-inference.huggingface.co/models/naver-clova-ix/donut-base-finetuned-cord-v2",
+    { 
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: img 
+    }
+  );
+  if (!r.ok) throw new Error(`HF error ${r.status}`);
+  return r.json();                 // Donut yields a JSON *string* in the first element
+}
 
 export interface DetectedField {
   field: string;
-  value: string;
-  bbox: [number, number, number, number]; // [x1, y1, x2, y2]
-  confidence: number;
+  bbox: [number, number, number, number];
 }
 
 export interface PersonalInfo {
@@ -66,9 +91,7 @@ export async function callDonut(imgBlob: Blob, token: string): Promise<DetectedF
       if (item.word && item.bbox) {
         detectedFields.push({
           field: item.word.toLowerCase(),
-          bbox: item.bbox,
-          value: '',
-          confidence: item.confidence || 0.9
+          bbox: item.bbox
         });
       }
     });
@@ -77,9 +100,7 @@ export async function callDonut(imgBlob: Blob, token: string): Promise<DetectedF
       if (result[key] && result[key].bbox) {
         detectedFields.push({
           field: key.toLowerCase(),
-          bbox: result[key].bbox,
-          value: '',
-          confidence: result[key].confidence || 0.9
+          bbox: result[key].bbox
         });
       }
     });
@@ -95,11 +116,7 @@ export async function callDonut(imgBlob: Blob, token: string): Promise<DetectedF
       { field: 'signature', bbox: [100, 400, 250, 450] as [number, number, number, number] }
     ];
     
-    detectedFields.push(...basicFields.map(field => ({
-      ...field,
-      value: '',
-      confidence: 0.9
-    })));
+    detectedFields.push(...basicFields);
   }
   
   return detectedFields;

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, FileText, Download, AlertCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { PersonalInfo } from "./PersonalInfoForm";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 interface PDFProcessorProps {
   formData: PersonalInfo;
@@ -89,85 +90,201 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
   };
 
   const generateFilledPDF = async (): Promise<string> => {
-    // In a real implementation, this would:
-    // 1. Convert PDF to image if needed
-    // 2. Use AI to detect form fields
-    // 3. Fill detected fields with user data in handwriting font
-    // 4. Add current date
-    // 5. Overlay signature image
-    // 6. Generate filled PDF
-    
-    // For now, we'll create a simple filled PDF simulation
-    const canvas = document.createElement('canvas');
-    canvas.width = 600;
-    canvas.height = 800;
-    const ctx = canvas.getContext('2d');
-    
-    if (ctx) {
-      // White background
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!uploadedFile) throw new Error("No PDF file uploaded");
+
+    try {
+      // Read the uploaded PDF file
+      const pdfBytes = await uploadedFile.arrayBuffer();
+      const pdfDoc = await PDFDocument.load(pdfBytes);
       
-      // Add form title
-      ctx.fillStyle = '#000000';
-      ctx.font = '24px Arial';
-      ctx.fillText('Filled Form', 50, 50);
+      // Get the first page (assuming single page form for now)
+      const pages = pdfDoc.getPages();
+      const firstPage = pages[0];
+      const { width, height } = firstPage.getSize();
+
+      // Embed a font for handwriting-style text
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
       
-      // Add filled information in handwriting style
-      ctx.font = '18px Dancing Script, cursive';
-      let yPosition = 100;
-      
-      const addField = (label: string, value: string) => {
-        ctx.fillStyle = '#666666';
-        ctx.font = '14px Arial';
-        ctx.fillText(label + ':', 50, yPosition);
-        
-        ctx.fillStyle = '#000000';
-        ctx.font = '18px Dancing Script, cursive';
-        ctx.fillText(value, 200, yPosition);
-        yPosition += 40;
+      // Define positions for form fields (these would normally be detected by AI)
+      // For demonstration, I'll place fields at common form locations
+      const fieldPositions = {
+        firstName: { x: 100, y: height - 150 },
+        middleName: { x: 250, y: height - 150 },
+        lastName: { x: 400, y: height - 150 },
+        gender: { x: 100, y: height - 200 },
+        maritalStatus: { x: 300, y: height - 200 },
+        cellPhone: { x: 100, y: height - 250 },
+        workPhone: { x: 300, y: height - 250 },
+        homeAddress: { x: 100, y: height - 300 },
+        state: { x: 100, y: height - 350 },
+        zipCode: { x: 200, y: height - 350 },
+        date: { x: 400, y: height - 400 },
+        signature: { x: 100, y: height - 500 }
       };
-      
-      addField('First Name', formData.firstName);
-      addField('Middle Name', formData.middleName);
-      addField('Last Name', formData.lastName);
-      addField('Gender', formData.gender);
-      addField('Marital Status', formData.maritalStatus);
-      addField('Cell Phone', formData.cellPhone);
-      addField('Work Phone', formData.workPhone);
-      addField('Home Address', formData.homeAddress);
-      addField('State', formData.state);
-      addField('ZIP Code', formData.zipCode);
-      addField('Date', new Date().toLocaleDateString());
-      
-      // Add signature if available
-      if (signatureDataUrl) {
-        const img = new Image();
-        return new Promise((resolve) => {
-          img.onload = () => {
-            ctx.fillText('Signature:', 50, yPosition);
-            ctx.drawImage(img, 200, yPosition - 20, 200, 60);
-            
-            const dataUrl = canvas.toDataURL('image/png');
-            resolve(dataUrl);
-          };
-          img.src = signatureDataUrl;
+
+      // Draw form data on the PDF
+      const fontSize = 12;
+      const textColor = rgb(0, 0, 0);
+
+      // Fill in the form fields with user data
+      if (formData.firstName) {
+        firstPage.drawText(formData.firstName, {
+          x: fieldPositions.firstName.x,
+          y: fieldPositions.firstName.y,
+          size: fontSize,
+          font,
+          color: textColor,
         });
       }
+
+      if (formData.middleName) {
+        firstPage.drawText(formData.middleName, {
+          x: fieldPositions.middleName.x,
+          y: fieldPositions.middleName.y,
+          size: fontSize,
+          font,
+          color: textColor,
+        });
+      }
+
+      if (formData.lastName) {
+        firstPage.drawText(formData.lastName, {
+          x: fieldPositions.lastName.x,
+          y: fieldPositions.lastName.y,
+          size: fontSize,
+          font,
+          color: textColor,
+        });
+      }
+
+      if (formData.gender) {
+        firstPage.drawText(formData.gender, {
+          x: fieldPositions.gender.x,
+          y: fieldPositions.gender.y,
+          size: fontSize,
+          font,
+          color: textColor,
+        });
+      }
+
+      if (formData.maritalStatus) {
+        firstPage.drawText(formData.maritalStatus, {
+          x: fieldPositions.maritalStatus.x,
+          y: fieldPositions.maritalStatus.y,
+          size: fontSize,
+          font,
+          color: textColor,
+        });
+      }
+
+      if (formData.cellPhone) {
+        firstPage.drawText(formData.cellPhone, {
+          x: fieldPositions.cellPhone.x,
+          y: fieldPositions.cellPhone.y,
+          size: fontSize,
+          font,
+          color: textColor,
+        });
+      }
+
+      if (formData.workPhone) {
+        firstPage.drawText(formData.workPhone, {
+          x: fieldPositions.workPhone.x,
+          y: fieldPositions.workPhone.y,
+          size: fontSize,
+          font,
+          color: textColor,
+        });
+      }
+
+      if (formData.homeAddress) {
+        firstPage.drawText(formData.homeAddress, {
+          x: fieldPositions.homeAddress.x,
+          y: fieldPositions.homeAddress.y,
+          size: fontSize,
+          font,
+          color: textColor,
+        });
+      }
+
+      if (formData.state) {
+        firstPage.drawText(formData.state, {
+          x: fieldPositions.state.x,
+          y: fieldPositions.state.y,
+          size: fontSize,
+          font,
+          color: textColor,
+        });
+      }
+
+      if (formData.zipCode) {
+        firstPage.drawText(formData.zipCode, {
+          x: fieldPositions.zipCode.x,
+          y: fieldPositions.zipCode.y,
+          size: fontSize,
+          font,
+          color: textColor,
+        });
+      }
+
+      // Add current date
+      const currentDate = new Date().toLocaleDateString();
+      firstPage.drawText(currentDate, {
+        x: fieldPositions.date.x,
+        y: fieldPositions.date.y,
+        size: fontSize,
+        font,
+        color: textColor,
+      });
+
+      // Add signature if available
+      if (signatureDataUrl) {
+        try {
+          // Convert signature data URL to PNG bytes
+          const signatureBytes = await fetch(signatureDataUrl).then(res => res.arrayBuffer());
+          const signatureImage = await pdfDoc.embedPng(signatureBytes);
+          
+          // Draw signature on the PDF
+          firstPage.drawImage(signatureImage, {
+            x: fieldPositions.signature.x,
+            y: fieldPositions.signature.y,
+            width: 150,
+            height: 50,
+          });
+        } catch (error) {
+          console.error("Error embedding signature:", error);
+          // If signature embedding fails, just add text
+          firstPage.drawText("[Signature]", {
+            x: fieldPositions.signature.x,
+            y: fieldPositions.signature.y,
+            size: fontSize,
+            font,
+            color: textColor,
+          });
+        }
+      }
+
+      // Save the PDF and return as data URL
+      const filledPdfBytes = await pdfDoc.save();
+      const blob = new Blob([filledPdfBytes], { type: 'application/pdf' });
+      const dataUrl = URL.createObjectURL(blob);
+      
+      return dataUrl;
+    } catch (error) {
+      console.error("Error processing PDF:", error);
+      throw new Error("Failed to process PDF file");
     }
-    
-    return canvas.toDataURL('image/png');
   };
 
   const downloadFilledPDF = () => {
     if (!filledPdfUrl) return;
     
     const link = document.createElement('a');
-    link.download = 'filled-form.png'; // In real implementation, this would be a PDF
+    link.download = `filled-${uploadedFile?.name || 'form.pdf'}`;
     link.href = filledPdfUrl;
     link.click();
     
-    toast("Filled form downloaded!");
+    toast("Filled PDF downloaded!");
   };
 
   return (

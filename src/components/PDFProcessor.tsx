@@ -10,6 +10,9 @@ import { PersonalInfo } from "./PersonalInfoForm";
 import { PDFDocument, rgb } from "pdf-lib";
 import * as pdfjsLib from "pdfjs-dist";
 
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
 interface PDFProcessorProps {
   formData: PersonalInfo;
   signatureDataUrl: string | null;
@@ -27,9 +30,6 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingResult, setProcessingResult] = useState<'complete' | 'incomplete' | null>(null);
   const [filledPdfUrl, setFilledPdfUrl] = useState<string | null>(null);
-  const [hfToken, setHfToken] = useState<string>(() => {
-    return localStorage.getItem('hf_token') || '';
-  });
 
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -131,15 +131,11 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
   };
 
   const detectFields = async (imageBase64: string): Promise<DetectedField[]> => {
-    if (!hfToken) {
-      throw new Error("Hugging Face API token is required");
-    }
-
     // TODO: Structure for easy backend migration - replace this URL with '/api/detect-fields' when backend is ready
     const response = await fetch('https://api-inference.huggingface.co/models/naver-clova-ix/donut-base-finetuned-cord-v2', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${hfToken}`,
+        'Authorization': 'Bearer [paste your token here]', // Hardcoded for prototyping
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ inputs: imageBase64 })
@@ -330,10 +326,6 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
     toast("Filled PDF downloaded!");
   };
 
-  const saveHfToken = () => {
-    localStorage.setItem('hf_token', hfToken);
-    toast.success("Hugging Face token saved!");
-  };
 
   return (
     <Card className="shadow-elegant">
@@ -341,42 +333,6 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
         <CardTitle className="text-xl font-semibold">PDF Form Processor</CardTitle>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
-        
-        {/* Hugging Face Token Input */}
-        <div className="space-y-2">
-          <Label htmlFor="hf-token" className="text-sm font-medium">
-            Hugging Face API Token
-          </Label>
-          <div className="flex space-x-2">
-            <Input
-              id="hf-token"
-              type="password"
-              placeholder="Enter your Hugging Face API token..."
-              value={hfToken}
-              onChange={(e) => setHfToken(e.target.value)}
-              className="flex-1"
-            />
-            <Button
-              onClick={saveHfToken}
-              variant="outline"
-              size="sm"
-            >
-              Save
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Get your token from{" "}
-            <a 
-              href="https://huggingface.co/settings/tokens" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Hugging Face Settings
-            </a>
-          </p>
-        </div>
-
         {/* Upload Area */}
         <div
           {...getRootProps()}

@@ -64,14 +64,15 @@ export const PDFProcessor = ({ formData, signatureDataUrl, hfToken }: PDFProcess
   };
 
   // Enhanced field detection with better parsing
-  const detectFields = async (imageBase64: string): Promise<DetectedField[]> => {
-    // Hardcoded token for testing - replace with your actual token
-    const API_TOKEN = hfToken || 'hf_your_token_here';
+  const detectFields = async (imageBase64: string, token: string): Promise<DetectedField[]> => {
+    if (!token || !token.startsWith('hf_')) {
+      throw new Error('Valid Hugging Face token is required');
+    }
     
     const response = await fetch('https://api-inference.huggingface.co/models/naver-clova-ix/donut-base-finetuned-cord-v2', {
       method: 'POST',
       headers: { 
-        'Authorization': `Bearer ${API_TOKEN}`, 
+        'Authorization': `Bearer ${token}`, 
         'Content-Type': 'application/json' 
       },
       body: JSON.stringify({ inputs: imageBase64 })
@@ -245,13 +246,14 @@ export const PDFProcessor = ({ formData, signatureDataUrl, hfToken }: PDFProcess
     mutationFn: async () => {
       if (!uploadedFile) throw new Error("No PDF file uploaded");
       if (!signatureDataUrl) throw new Error("No signature provided");
+      if (!hfToken) throw new Error("Hugging Face token is required");
 
       // Convert PDF first page to high-quality image
       const pdfArrayBuffer = await uploadedFile.arrayBuffer();
       const imageBase64 = await convertPdfToImage(pdfArrayBuffer);
       
       // Detect fields using Donut model
-      const detectedFields = await detectFields(imageBase64);
+      const detectedFields = await detectFields(imageBase64, hfToken);
       
       // Check if we have basic fields detected
       const basicFields = ['first_name', 'last_name', 'phone', 'address', 'signature'];
@@ -306,7 +308,10 @@ export const PDFProcessor = ({ formData, signatureDataUrl, hfToken }: PDFProcess
       toast.error("Please create a signature first");
       return;
     }
-    // Token validation removed for cleaner UI - token hardcoded in detectFields
+    if (!hfToken) {
+      toast.error("Please enter your Hugging Face API token first");
+      return;
+    }
     
     processPdf.mutate();
   };

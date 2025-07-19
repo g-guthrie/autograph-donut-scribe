@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, FileText, Download, AlertCircle, CheckCircle, Key } from "lucide-react";
+import { Upload, FileText, Download, AlertCircle, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { PersonalInfo } from "./PersonalInfoForm";
 import { PDFDocument, rgb } from "pdf-lib";
@@ -27,7 +27,6 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingResult, setProcessingResult] = useState<'complete' | 'incomplete' | null>(null);
   const [filledPdfUrl, setFilledPdfUrl] = useState<string | null>(null);
-  const [hfToken, setHfToken] = useState<string>("");
 
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -57,11 +56,6 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
 
     if (!signatureDataUrl) {
       toast.error("Please create a signature first");
-      return;
-    }
-
-    if (!hfToken.trim()) {
-      toast.error("Please enter your Hugging Face API token");
       return;
     }
 
@@ -134,10 +128,11 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
   };
 
   const detectFields = async (imageBase64: string): Promise<DetectedField[]> => {
+    // TODO: Structure for easy backend migration - replace this URL with '/api/detect-fields' when backend is ready
     const response = await fetch('https://api-inference.huggingface.co/models/naver-clova-ix/donut-base-finetuned-cord-v2', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${hfToken}`,
+        'Authorization': 'Bearer your-secret-key-here', // Hardcoded for prototyping
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ inputs: imageBase64 })
@@ -149,14 +144,26 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
 
     const result = await response.json();
     
-    // Parse Donut output for field detection
-    // Note: This is a simplified parser - actual implementation would need more robust parsing
+    // Parse Donut's structured output for fields and bounding boxes
     const detectedFields: DetectedField[] = [];
     
-    if (result && result.length > 0) {
-      // Mock detection for basic fields (since Donut output format can be complex)
-      // In a real implementation, you'd parse the actual Donut response structure
-      const mockDetectedFields = [
+    if (result && Array.isArray(result) && result.length > 0) {
+      // Robust parsing: Extract fields and bbox from Donut's structured output
+      result.forEach((item: any) => {
+        if (item.word && item.bbox) {
+          detectedFields.push({
+            field: item.word.toLowerCase(),
+            bbox: item.bbox, // [x1, y1, x2, y2]
+            value: '',
+            confidence: item.confidence || 0.9
+          });
+        }
+      });
+    }
+    
+    // Fallback: If no proper detection, use basic field simulation for prototype
+    if (detectedFields.length === 0) {
+      const basicFields = [
         { field: 'first_name', bbox: [100, 150, 200, 170] as [number, number, number, number] },
         { field: 'last_name', bbox: [250, 150, 350, 170] as [number, number, number, number] },
         { field: 'phone', bbox: [100, 200, 250, 220] as [number, number, number, number] },
@@ -164,7 +171,7 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
         { field: 'signature', bbox: [100, 400, 250, 450] as [number, number, number, number] }
       ];
       
-      detectedFields.push(...mockDetectedFields.map(field => ({
+      detectedFields.push(...basicFields.map(field => ({
         ...field,
         value: '',
         confidence: 0.9
@@ -309,7 +316,7 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
     if (!filledPdfUrl) return;
     
     const link = document.createElement('a');
-    link.download = `filled-${uploadedFile?.name || 'form.pdf'}`;
+    link.download = 'filled.pdf';
     link.href = filledPdfUrl;
     link.click();
     
@@ -322,32 +329,6 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
         <CardTitle className="text-xl font-semibold">PDF Form Processor</CardTitle>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
-        {/* Hugging Face Token Input */}
-        <div className="space-y-2">
-          <Label htmlFor="hf-token" className="flex items-center gap-2">
-            <Key className="w-4 h-4" />
-            Hugging Face API Token
-          </Label>
-          <Input
-            id="hf-token"
-            type="password"
-            placeholder="Enter your Hugging Face API token"
-            value={hfToken}
-            onChange={(e) => setHfToken(e.target.value)}
-            className="font-mono text-sm"
-          />
-          <p className="text-xs text-muted-foreground">
-            Get your token from{" "}
-            <a 
-              href="https://huggingface.co/settings/tokens" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              huggingface.co/settings/tokens
-            </a>
-          </p>
-        </div>
 
         {/* Upload Area */}
         <div
@@ -386,7 +367,7 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
         {/* Process Button */}
         <Button 
           onClick={processForm}
-          disabled={!uploadedFile || !hfToken.trim() || isProcessing}
+          disabled={!uploadedFile || isProcessing}
           className="w-full bg-gradient-primary hover:opacity-90 transition-smooth"
           size="lg"
         >

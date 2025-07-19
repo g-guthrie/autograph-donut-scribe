@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PersonalInfoForm, PersonalInfo } from "./PersonalInfoForm";
 import { SignatureCanvas } from "./SignatureCanvas";
 import { PDFProcessor } from "./PDFProcessor";
 import { toast } from "sonner";
+
+interface FormProcessorProps {
+  hfToken: string;
+}
 
 const INITIAL_FORM_DATA: PersonalInfo = {
   firstName: "",
@@ -23,7 +27,7 @@ interface SavedProfile {
   timestamp: number;
 }
 
-export const FormProcessor = () => {
+export const FormProcessor = ({ hfToken }: FormProcessorProps) => {
   const [formData, setFormData] = useState<PersonalInfo>(INITIAL_FORM_DATA);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [pin, setPin] = useState("");
@@ -74,8 +78,7 @@ export const FormProcessor = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-foreground mb-4">
@@ -111,6 +114,7 @@ export const FormProcessor = () => {
             <PDFProcessor
               formData={formData}
               signatureDataUrl={signatureDataUrl}
+              hfToken={hfToken}
             />
           </div>
         </div>
@@ -122,6 +126,5 @@ export const FormProcessor = () => {
           </p>
         </div>
       </div>
-    </div>
   );
 };

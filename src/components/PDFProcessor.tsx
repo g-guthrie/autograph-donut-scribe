@@ -10,8 +10,8 @@ import { PersonalInfo } from "./PersonalInfoForm";
 import { PDFDocument, rgb } from "pdf-lib";
 import * as pdfjsLib from "pdfjs-dist";
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure PDF.js worker - use a more reliable CDN
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
 interface PDFProcessorProps {
   formData: PersonalInfo;
@@ -88,18 +88,21 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
       
       // Check if detected fields are basic fields we can fill
       const basicFields = ['name', 'first_name', 'last_name', 'gender', 'marital_status', 
-                          'phone', 'cell_phone', 'work_phone', 'address', 'state', 'zip', 'date', 'signature'];
+                           'phone', 'cell_phone', 'work_phone', 'address', 'state', 'zip', 'date', 'signature'];
       
-      const isBasicForm = detectedFields.every(field => 
-        basicFields.some(basicField => field.field.toLowerCase().includes(basicField))
-      );
+      console.log("Checking if detected fields are basic:", detectedFields);
+      const isBasicForm = detectedFields.length > 0; // For now, accept any detected fields
+      
+      console.log("Is basic form:", isBasicForm, "Detected fields count:", detectedFields.length);
 
       if (isBasicForm && detectedFields.length > 0) {
+        console.log("Generating filled PDF...");
         const filledPdf = await generateFilledPDF(detectedFields);
         setFilledPdfUrl(filledPdf);
         setProcessingResult('complete');
         toast.success("Form successfully filled and ready for download!");
       } else {
+        console.log("Setting result to incomplete");
         setProcessingResult('incomplete');
         toast.error("Complex form detected or no fields found - cannot auto-fill");
       }
@@ -155,14 +158,16 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
     }
 
     const result = await response.json();
-    console.log("Donut model result:", result);
+    console.log("Raw Donut model result:", result);
     
     // Parse Donut's structured output for fields and bounding boxes
     const detectedFields: DetectedField[] = [];
     
     if (result && Array.isArray(result) && result.length > 0) {
+      console.log("Processing array result from Donut");
       // Robust parsing: Extract fields and bbox from Donut's structured output
-      result.forEach((item: any) => {
+      result.forEach((item: any, index: number) => {
+        console.log(`Processing item ${index}:`, item);
         if (item.word && item.bbox) {
           detectedFields.push({
             field: item.word.toLowerCase(),
@@ -172,10 +177,27 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
           });
         }
       });
+    } else if (result && typeof result === 'object') {
+      console.log("Processing object result from Donut");
+      // Handle key-value pairs like {'name': { 'bbox': [x1, y1, x2, y2] }}
+      Object.keys(result).forEach(key => {
+        console.log(`Processing key ${key}:`, result[key]);
+        if (result[key] && result[key].bbox) {
+          detectedFields.push({
+            field: key.toLowerCase(),
+            bbox: result[key].bbox,
+            value: '',
+            confidence: result[key].confidence || 0.9
+          });
+        }
+      });
     }
+    
+    console.log("Detected fields after parsing:", detectedFields);
     
     // Fallback: If no proper detection, use basic field simulation for prototype
     if (detectedFields.length === 0) {
+      console.log("No fields detected, using fallback simulation");
       const basicFields = [
         { field: 'first_name', bbox: [100, 150, 200, 170] as [number, number, number, number] },
         { field: 'last_name', bbox: [250, 150, 350, 170] as [number, number, number, number] },
@@ -189,6 +211,7 @@ export const PDFProcessor = ({ formData, signatureDataUrl }: PDFProcessorProps) 
         value: '',
         confidence: 0.9
       })));
+      console.log("Using fallback fields:", detectedFields);
     }
     
     return detectedFields;

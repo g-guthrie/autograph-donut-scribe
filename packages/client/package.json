@@ -1,0 +1,19 @@
+{
+  "name": "@olympus/client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "@olympus/protocol": "workspace:*",
+    "@olympus/shared": "workspace:*",
+    "three": "^0.183.2"
+  },
+  "devDependencies": {
+    "@types/three": "^0.183.1",
+    "vite": "^8.0.1"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && vite build",
+    "dev": "sh -c 'vite --port ${OLYMPUS_CLIENT_PORT:-5173}'"
+  }
+}

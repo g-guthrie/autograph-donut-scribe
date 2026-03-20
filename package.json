@@ -1,0 +1,22 @@
+{
+  "name": "olympus",
+  "private": true,
+  "packageManager": "pnpm@10.30.0",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "scripts": {
+    "dev": "concurrently -n client,server -c blue,green \"pnpm dev:client\" \"pnpm dev:server\"",
+    "dev:client": "pnpm --filter @olympus/client dev",
+    "dev:server": "pnpm --filter @olympus/server dev",
+    "build": "pnpm -r build",
+    "test": "tsx --test packages/protocol/src/tests/**/*.test.ts packages/shared/src/tests/**/*.test.ts packages/server/src/tests/**/*.test.ts",
+    "preview:cf": "pnpm build && pnpm --filter @olympus/server preview",
+    "deploy": "pnpm build && pnpm --filter @olympus/server deploy"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,32 @@
+# Local SDKs, toolchains, VM/runtime artifacts
+/.tools/
+/emsdk/
+/downloads/
+/extracted/
+/source_game/
+/bundle_stage/
+/browser-check/
+
+# Large local assets
+/assets/
+
+# Common generated outputs and logs
+*.log
+*.tmp
+*.tar
+/tmp/
+/dist/
+/build/
+/out/
+
+# Node / package manager
+**/node_modules/
+**/.pnpm-store/
+
+# Python
+**/__pycache__/
+*.pyc
+
+# Local symlinks created by startup scripts
+/webxash3d-fwgs/examples/react-typescript-cs16-webrtc/public/valve.zip
+/webxash3d-fwgs/examples/react-typescript-cs16-webrtc/public/cs15-sprites

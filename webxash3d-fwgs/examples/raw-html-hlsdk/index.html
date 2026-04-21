@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Loading</title>
+    <style>
+        canvas {
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            position: fixed;
+        }
+
+        body {
+            margin: 0;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/xash3d-fwgs@latest/dist/raw.js"></script>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script type="module">
+    import JSZip from 'https://cdn.skypack.dev/jszip@3.10.1';
+
+    async function main() {
+        const files = {}
+        const res = await fetch('./valve.zip')
+        const zip = await JSZip.loadAsync(await res.arrayBuffer());
+        const extras = await (await fetch('https://cdn.jsdelivr.net/npm/xash3d-fwgs@latest/dist/valve/extras.pk3')).arrayBuffer()
+
+        await Promise.all(Object.keys(zip.files).map(async p => {
+            const file = zip.files[p]
+            if (file.dir) return;
+
+            const path = `/rodir/${p}`;
+
+            files[path] = await file.async("uint8array")
+        }))
+
+        Xash3D({
+            arguments: ['-windowed', '-ref', 'webgl2'],
+            canvas: document.getElementById('canvas'),
+            dynamicLibraries: [
+                "filesystem_stdio.wasm",
+                "libref_webgl2.wasm",
+                "cl_dlls/menu_emscripten_wasm32.wasm",
+                "dlls/hl_emscripten_wasm32.wasm",
+                "cl_dlls/client_emscripten_wasm32.wasm",
+            ],
+            onRuntimeInitialized: function () {
+                Object.keys(files)
+                    .forEach(k => {
+                        const dir = k.split('/')
+                            .slice(0, -1)
+                            .join('/');
+                        this.FS.mkdirTree(dir);
+                        this.FS.writeFile(k, files[k]);
+                    })
+                this.FS.writeFile('/rodir/valve/extras.pk3', new Uint8Array(extras));
+                this.FS.chdir('/rodir')
+                this.FS.mkdir('/rwdir')
+            },
+            locateFile: (p) => {
+                switch (p) {
+                    case 'xash.wasm':
+                        return 'https://cdn.jsdelivr.net/npm/xash3d-fwgs@latest/dist/xash.wasm'
+                    case 'filesystem_stdio.wasm':
+                        return 'https://cdn.jsdelivr.net/npm/xash3d-fwgs@latest/dist/filesystem_stdio.wasm'
+                    case 'libref_webgl2.wasm':
+                        return 'https://cdn.jsdelivr.net/npm/xash3d-fwgs@latest/dist/libref_webgl2.wasm'
+                    case 'cl_dlls/menu_emscripten_wasm32.wasm':
+                        return 'https://cdn.jsdelivr.net/npm/xash3d-fwgs@latest/dist/cl_dll/menu_emscripten_wasm32.wasm'
+                    case 'dlls/hl_emscripten_wasm32.wasm':
+                        return 'https://cdn.jsdelivr.net/npm/hlsdk-portable@latest/dist/valve/dlls/hl_emscripten_wasm32.wasm'
+                    case 'cl_dlls/client_emscripten_wasm32.wasm':
+                        return 'https://cdn.jsdelivr.net/npm/hlsdk-portable@latest/dist/valve/cl_dlls/client_emscripten_wasm32.wasm'
+                    default:
+                        return p
+                }
+            },
+        })
+    }
+
+    main()
+</script>
+</body>
+</html>
